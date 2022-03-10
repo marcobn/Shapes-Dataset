@@ -85,11 +85,13 @@ else:
 
 #
 
+DEFAULT_RESOLUTION = (28, 28)
+
 __IMG_COUNTER = 0 # Needed for tracking, depracted
 
 Random_Generator = np.random.default_rng()
 
-def ax_plot_digit(ax, digit, shape=(28, 28), colormap=plt.cm.gray, aspect=None):
+def ax_plot_digit(ax, digit, shape=DEFAULT_RESOLUTION, colormap=plt.cm.gray, aspect=None):
     ax.imshow(digit.reshape(shape), cmap=colormap, aspect=aspect)#extent=[-4,4,-1,1], )
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
@@ -138,7 +140,7 @@ def __plot_letter(x_data, y_data, plot_letter):
     plt.text(x_data, y_data, plot_letter, color='black', fontsize='xx-large')
     
 
-def saving_plotter(x_data, y_data, folder="Dataset/", resolution=(28, 28), plot_hyperbola=False):
+def saving_plotter(x_data, y_data, folder="Dataset/", resolution=DEFAULT_RESOLUTION, plot_hyperbola=False):
     """
     Depracted
     Saves image as .png
@@ -168,7 +170,7 @@ def saving_plotter(x_data, y_data, folder="Dataset/", resolution=(28, 28), plot_
 # Plot to grayscale matrix.
 
 
-def numeric_save_plotter(x_data, y_data, resolution=(28, 28), show=False, plot_hyperbola=False, plot_letter=""):
+def numeric_save_plotter(x_data, y_data, resolution=DEFAULT_RESOLUTION, show=False, plot_hyperbola=False, plot_letter=""):
     """
     Returns image as grayscale matrix
     Use %matplotlib agg to disable inline plotting.
@@ -264,7 +266,7 @@ def createCircle(radius, center):
 def makeCircleSample():
     center = [[0,0],[-1,-2],[2,-1.5],[-1.8,1.2]]
     for i in center:
-        x_circle, y_circle = createCircle(center=i,radius=15)
+        x_circle, y_circle = createCircle(center=i, radius=15)
         viewer(x_circle,y_circle, 'Circle')
 
 # =============================================================================    
@@ -426,7 +428,7 @@ def TriangleSample(size):
     for x, y in TriangleGenerator(size):
         viewer(x, y, 'triangle')
       
-def createTriangleNumericImageDataset(amount=DEFAULT_SUBSET_SIZE, resolution=(28, 28), show=False, min_area=40):
+def createTriangleNumericImageDataset(amount=DEFAULT_SUBSET_SIZE, resolution=DEFAULT_RESOLUTION, show=False, min_area=40):
     data = np.empty((amount, np.prod(resolution)), dtype='uint8')
 
     for i, (x, y) in enumerate(TriangleGenerator(amount, min_area)):
@@ -474,7 +476,7 @@ def createParabolaImageDataset():
     for x, y in ParabolaGenerator(amount=DEFAULT_SUBSET_SIZE):
         saving_plotter(x, y)
         
-def createParabolaNumericImageDataset(amount=DEFAULT_SUBSET_SIZE, resolution=(28, 28)):
+def createParabolaNumericImageDataset(amount=DEFAULT_SUBSET_SIZE, resolution=DEFAULT_RESOLUTION):
     data = np.empty((amount, np.prod(resolution)), dtype='uint8')
 
     for i, (x, y) in enumerate(ParabolaGenerator(amount)):
@@ -524,7 +526,7 @@ def createEllipseNumericalDataset(sample_count=6):
     return ellipse_dataset
 
 
-def createEllipseNumericImageDataset(amount=DEFAULT_SUBSET_SIZE, resolution=(28, 28), show=False):
+def createEllipseNumericImageDataset(amount=DEFAULT_SUBSET_SIZE, resolution=DEFAULT_RESOLUTION, show=False):
     data = np.empty((amount, np.prod(resolution)), dtype='uint8')
 
     for i, (x, y) in enumerate(EllipseGenerator(amount)):
@@ -574,7 +576,7 @@ def createHyperbolaImageDataset(amount=DEFAULT_SUBSET_SIZE):
     for x, y in HyperbolaGenerator(amount):
         saving_plotter(x, y)
     
-def createHyperbolaNumericImageDataset(amount=DEFAULT_SUBSET_SIZE, resolution=(28, 28), show=False):
+def createHyperbolaNumericImageDataset(amount=DEFAULT_SUBSET_SIZE, resolution=DEFAULT_RESOLUTION, show=False):
     data = np.empty((amount, np.prod(resolution)), dtype='uint8')
     
     for i, (x, y) in enumerate(HyperbolaGenerator(amount)):
@@ -620,7 +622,7 @@ def createCircleImageDataset(amount):
         saving_plotter(x, y)
         
 
-def createCircleNumericImageDataset(amount=DEFAULT_SUBSET_SIZE, resolution=(28, 28)):
+def createCircleNumericImageDataset(amount=DEFAULT_SUBSET_SIZE, resolution=DEFAULT_RESOLUTION):
     data = np.empty((amount, np.prod(resolution)), dtype='uint8')
 
     for i, (x, y) in enumerate(CircleGenerator(amount)):
@@ -651,7 +653,7 @@ def LetterGenerator(amount, type="upper"):
         yield center_x, center_y, alphabet[Random_Generator.integers(26)]
     
 
-def createLetterNumericImageDataset(amount=DEFAULT_SUBSET_SIZE, resolution=(28, 28), show=False):
+def createLetterNumericImageDataset(amount=DEFAULT_SUBSET_SIZE, resolution=DEFAULT_RESOLUTION, show=False):
     data = np.empty((amount, np.prod(resolution)), dtype='uint8')
 
 
@@ -690,7 +692,7 @@ def getNumericalDatasets(*Names, sample_count=6):
     return combined_dataset
 
 
-def createSingleGrayscaleDataset(generator, name, amount=DEFAULT_SUBSET_SIZE, resolution=(28, 28)):
+def createSingleGrayscaleDataset(generator, name, amount=DEFAULT_SUBSET_SIZE, resolution=DEFAULT_RESOLUTION):
     data = np.empty((amount, np.prod(resolution)), dtype='uint8')
 
     for i, (x, y) in enumerate(generator):
@@ -701,7 +703,7 @@ def createSingleGrayscaleDataset(generator, name, amount=DEFAULT_SUBSET_SIZE, re
     df.insert(0, 'shape', name)
     return df
 
-def createGrayscaleImageDataset(generators, names, subset_size=DEFAULT_SUBSET_SIZE, resolution=(28, 28)):
+def createGrayscaleImageDataset(generators, names, subset_size=DEFAULT_SUBSET_SIZE, resolution=DEFAULT_RESOLUTION):
     assert len(generators) == len(names), "Amount of generator objects and amount of provides names does not match."
     dataset = pd.concat([createSingleGrayscaleDataset(gen, name) for gen, name in zip(generators, names)])
     return dataset

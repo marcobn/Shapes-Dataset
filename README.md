@@ -3,11 +3,19 @@ Generates a grayscale image dataset of different shapes. Triangles, circles, ell
 
 
 Command Line usage
-required: Argument 1 the word 'run' to enable it.
-optional: Argument 2 choose subset size, default 2000
-optional: Argument 3 Outputfile name
+* required: Argument 1 the word 'run' to enable it.
+* optional: Argument 2 choose subset size, default 2000
+* optional: Argument 3 Outputfile name
 
 for example this generates 5 * 1000 images:
 `python shapes_generation.py run 1000`
 
 For a broader functional and plotting usage see the help text of the file.
+
+
+---
+
+Secondly there is a TensorFlow model included for classification with an accuracy of 99%+ on a train and test dataset.
+Below you see some examples and misclassifications of the model.
+
+![Examples and misclassification](https://github.com/Daraan/Shapes-Dataset/images/Shapes Classifier Wrong Outputs.jpg)

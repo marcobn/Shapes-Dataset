@@ -1,2 +1,13 @@
 # Shapes-Dataset
 Generates a grayscale image dataset of different shapes. Triangles, circles, ellipses, para- and hyperbolas also non solid NGons. The images are saved as a gzip compressed .csv file.
+
+
+Command Line usage
+required: Argument 1 the word 'run' to enable it.
+optional: Argument 2 choose subset size, default 2000
+optional: Argument 3 Outputfile name
+
+for example this generates 5 * 1000 images:
+`python shapes_generation.py run 1000`
+
+For a broader functional and plotting usage see the help text of the file.

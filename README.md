@@ -18,4 +18,4 @@ For a broader functional and plotting usage see the help text of the file.
 Secondly there is a TensorFlow model included for classification with an accuracy of 99%+ on a train and test dataset.
 Below you see some examples and misclassifications of the model.
 
-![Examples and misclassification](https://github.com/Daraan/Shapes-Dataset/images/Shapes Classifier Wrong Outputs.jpg)
+![Examples and misclassification](https://github.com/Daraan/Shapes-Dataset/blob/main/images/Shapes%20Classifier%20Wrong%20Outputs.jpg)

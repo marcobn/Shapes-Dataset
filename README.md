@@ -17,5 +17,11 @@ For a broader functional and plotting usage see the help text of the file.
 
 Secondly there is a TensorFlow model included for classification with an accuracy of 99%+ on a train and test dataset.
 Below you see some examples and misclassifications of the model.
+The images are from an earlier version of the code where no restrain to minimal size was implemented.
 
 ![Examples and misclassification](https://github.com/Daraan/Shapes-Dataset/blob/main/images/Shapes%20Classifier%20Wrong%20Outputs.jpg)
+
+---
+
+Furhter credits to and code partially taken from:
+[https://github.com/cctech-labs/ml-2dshapes](https://github.com/cctech-labs/ml-2dshapes)

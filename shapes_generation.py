@@ -76,20 +76,25 @@ import matplotlib.pyplot as plt
 import math
 import pandas as pd
 import sys
+import argparse
 
 
-if len(sys.argv) > 2:
-    DEFAULT_SUBSET_SIZE = int(sys.argv[2])
-else:
-    DEFAULT_SUBSET_SIZE = 2000
+# Default subset size (legacy CLI previously overrode this dynamically)
+DEFAULT_SUBSET_SIZE = 2000
 
 #
 
-DEFAULT_RESOLUTION = (28, 28)
+DEFAULT_RESOLUTION = (28, 28)  # kept as a constant, but CLI --resolution is now the runtime default
 
 __IMG_COUNTER = 0 # Needed for tracking, depracted
 
 Random_Generator = np.random.default_rng()
+
+def set_seed(seed: int | None):
+    """Set global RNG seed for deterministic dataset generation."""
+    global Random_Generator
+    if seed is not None:
+        Random_Generator = np.random.default_rng(seed)
 
 def ax_plot_digit(ax, digit, shape=DEFAULT_RESOLUTION, colormap=plt.cm.gray, aspect=None):
     ax.imshow(digit.reshape(shape), cmap=colormap, aspect=aspect)#extent=[-4,4,-1,1], )
@@ -123,21 +128,21 @@ def viewer(x_data, y_data, title, save=False):
 
 # =============================================================================
 
-def __plot_normal(x_data, y_data):
-    plt.plot(x_data, y_data, 'black', linewidth=10)
+def __plot_normal(ax, x_data, y_data, color='black', linewidth=2):
+    ax.plot(x_data, y_data, color=color, linewidth=linewidth, antialiased=True)
     
-def __plot_hyperbola(x_data, y_data):
+def __plot_hyperbola(ax, x_data, y_data, color='black', linewidth=2):
     # Need to sepearate the plots else the jump lines will be plotted too
     l = len(x_data)
     # Arc 1
-    plt.plot(x_data[:l//4], y_data[:l//4], 'black', linewidth=10)
-    plt.plot(x_data[l*3 // 4:], y_data[l*3 // 4:], 'black', linewidth=10)
+    ax.plot(x_data[:l//4], y_data[:l//4], color=color, linewidth=linewidth, antialiased=True)
+    ax.plot(x_data[l*3 // 4:], y_data[l*3 // 4:], color=color, linewidth=linewidth, antialiased=True)
     # Arc 2
-    plt.plot(x_data[l//4 : l*3 // 4], y_data[l//4 : l*3 // 4], 'black', linewidth=10)
+    ax.plot(x_data[l//4 : l*3 // 4], y_data[l//4 : l*3 // 4], color=color, linewidth=linewidth, antialiased=True)
 
 
-def __plot_letter(x_data, y_data, plot_letter):
-    plt.text(x_data, y_data, plot_letter, color='black', fontsize='xx-large')
+def __plot_letter(ax, x_data, y_data, plot_letter, color='black'):
+    ax.text(x_data, y_data, plot_letter, color=color, fontsize='xx-large')
     
 
 def saving_plotter(x_data, y_data, folder="Dataset/", resolution=DEFAULT_RESOLUTION, plot_hyperbola=False):
@@ -171,35 +176,70 @@ def saving_plotter(x_data, y_data, folder="Dataset/", resolution=DEFAULT_RESOLUT
 
 
 def numeric_save_plotter(x_data, y_data, resolution=DEFAULT_RESOLUTION, show=False, plot_hyperbola=False, plot_letter=""):
+    """Render the provided (x,y) data to a grayscale numpy array with shape `resolution`.
+
+    Previous implementation created a very large high-DPI canvas (e.g. 2800x2800 px for a 28x28 target)
+    and then attempted to forcibly reshape the raw buffer to the small resolution which raised a
+    ValueError. We now create a canvas whose pixel dimensions match the requested resolution so the
+    buffer can be reshaped safely. As a fallback, if for any reason the canvas size differs, we perform
+    a simple nearest-neighbour down/upsampling via slicing / numpy repeat (without adding new deps).
     """
-    Returns image as grayscale matrix
-    Use %matplotlib agg to disable inline plotting.
-    """
-    fig = plt.figure(figsize=(resolution[0] / 10, resolution[1] / 10), edgecolor=None, frameon=False, dpi=1000)
-    fig.patch.set_visible(False)
-    plt.axis('off')
-    plt.box(False)
+    target_h, target_w = resolution  # (rows, cols)
+
+    # Choose a dpi and figsize combination that yields exactly the target pixel resolution.
+    # pixel_width = figsize[0] * dpi, pixel_height = figsize[1] * dpi
+    # We keep dpi moderate (e.g. 100) to avoid backend / font issues and set figsize accordingly.
+    dpi = 100
+    figsize = (target_w / dpi, target_h / dpi)
+    fig = plt.figure(figsize=figsize, edgecolor=None, frameon=False, dpi=dpi)
+    # Transparent figure and axes to ensure background stays 0 in RGB
+    fig.patch.set_alpha(0)
+    ax = fig.add_axes([0, 0, 1, 1])  # full-bleed axes
+    ax.set_axis_off()
+    ax.set_facecolor((0, 0, 0, 0))
     plt.margins(0)
+    line_color = 'white'
+    # Scale line width for resolution; keep thin lines for 28x28
+    lw = max(1.0, (min(target_h, target_w) / 28.0) * 2.0)
     if plot_hyperbola:
-        __plot_hyperbola(x_data, y_data)
+        __plot_hyperbola(ax, x_data, y_data, color=line_color, linewidth=lw)
     elif not plot_letter:
-        __plot_normal(x_data, y_data) 
+        __plot_normal(ax, x_data, y_data, color=line_color, linewidth=lw)
     else:
-        __plot_letter(x_data, y_data, plot_letter)
-    plt.ylim(-20, 20)
-    plt.xlim(-20, 20)
-    plt.grid(False)
-    plt.xticks([])
-    plt.yticks([])
-    fig.tight_layout(pad=0)
+        __plot_letter(ax, x_data, y_data, plot_letter, color=line_color)
+    ax.set_ylim(-20, 20)
+    ax.set_xlim(-20, 20)
+    ax.grid(False)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    # tight_layout can interfere with full-bleed axes; not needed
     fig.canvas.draw()
-    img_mat = np.frombuffer(fig.canvas.print_to_buffer()[0], dtype='uint8').reshape(resolution[0], resolution[1], 4)[:,:,-1]
-    #print(np.max(img_mat))
-    #print(np.min(img_mat))
-    #plot_digit(img_mat)
+
+    # Obtain buffer & actual canvas dimensions
+    buf, (canvas_w, canvas_h) = fig.canvas.print_to_buffer()
+    img = np.frombuffer(buf, dtype='uint8').reshape(canvas_h, canvas_w, 4)
+    # Use alpha channel so background (fully transparent) is 0 and strokes are >0
+    img_mat = img[:, :, 3]
+
+    # If the canvas size does not match target resolution, resize (nearest neighbour) without extra deps
+    if (canvas_h, canvas_w) != (target_h, target_w):
+        # Simple scaling using numpy indexing / repetition
+        scale_y = target_h / canvas_h
+        scale_x = target_w / canvas_w
+        if scale_y < 1 or scale_x < 1:
+            # Downscale by selecting nearest indices
+            y_idx = (np.linspace(0, canvas_h - 1, target_h)).astype(int)
+            x_idx = (np.linspace(0, canvas_w - 1, target_w)).astype(int)
+            img_mat = img_mat[np.ix_(y_idx, x_idx)]
+        else:
+            # Upscale by repeating
+            img_mat = np.repeat(np.repeat(img_mat, int(np.ceil(scale_y)), axis=0), int(np.ceil(scale_x)), axis=1)[:target_h, :target_w]
+
     if show:
+        plt.imshow(img_mat, cmap='gray')
+        plt.axis('off')
         plt.show()
-    plt.close()
+    plt.close(fig)
     return img_mat
 
 # =============================================================================
@@ -705,13 +745,100 @@ def createSingleGrayscaleDataset(generator, name, amount=DEFAULT_SUBSET_SIZE, re
 
 def createGrayscaleImageDataset(generators, names, subset_size=DEFAULT_SUBSET_SIZE, resolution=DEFAULT_RESOLUTION):
     assert len(generators) == len(names), "Amount of generator objects and amount of provides names does not match."
-    dataset = pd.concat([createSingleGrayscaleDataset(gen, name) for gen, name in zip(generators, names)])
+    dataset = pd.concat([
+        createSingleGrayscaleDataset(gen, name, amount=subset_size, resolution=resolution)
+        for gen, name in zip(generators, names)
+    ])
     return dataset
 
 
 # Activate manually or possible via command line option.
-if (False and __name__ == "__main__") or (len(sys.argv) > 1 and "run" == sys.argv[1]):
-    df = createGrayscaleImageDataset(generators=[TriangleGenerator(), CircleGenerator(), EllipseGenerator(), ParabolaGenerator(), HyperbolaGenerator()],
-                                names=('triangle', 'circle', 'ellipse', 'parabola', 'hyperbola'))
-    df.to_csv("ShapesV4.csv" if len(sys.argv) < 3 else sys.argv[3], compression='gzip', index=None)
+def _parse_args(argv=None):
+    """Parse command line arguments (supports legacy positional style)."""
+    parser = argparse.ArgumentParser(description="Generate grayscale datasets of geometric shapes.")
+    # Positional legacy: run, subset_size, outfile
+    parser.add_argument('action', nargs='?', choices=['run'], help="Action: use 'run' to generate dataset")
+    parser.add_argument('subset_legacy', nargs='?', type=int, help="(legacy) subset size positional")
+    parser.add_argument('outfile_legacy', nargs='?', help="(legacy) output filename positional")
+
+    # Modern options
+    parser.add_argument('--subset', '-n', type=int, default=None, help=f"Number of samples PER SHAPE (default {DEFAULT_SUBSET_SIZE})")
+    parser.add_argument('--out', '-o', type=str, default=None, help="Output file name (.csv or .npz). Default ShapesV4.csv")
+    parser.add_argument('--seed', type=int, default=None, help="Seed for RNG to make generation deterministic")
+    parser.add_argument('--shapes', type=str, nargs='*', default=None,
+                        help="Subset of shapes to include (triangle circle ellipse parabola hyperbola)")
+    parser.add_argument('--resolution', type=int, nargs=2, metavar=('H', 'W'), default=[28, 28],
+                        help="Resolution, default 28 28")
+    return parser.parse_args(argv)
+
+
+def _build_generators(selected_shapes, subset_size):
+    gens = []
+    names = []
+    for shape in selected_shapes:
+        s = shape.lower()
+        if s == 'triangle':
+            gens.append(TriangleGenerator(amount=subset_size))
+            names.append('triangle')
+        elif s == 'circle':
+            gens.append(CircleGenerator(amount=subset_size))
+            names.append('circle')
+        elif s == 'ellipse':
+            gens.append(EllipseGenerator(amount=subset_size))
+            names.append('ellipse')
+        elif s == 'parabola':
+            gens.append(ParabolaGenerator(amount=subset_size))
+            names.append('parabola')
+        elif s == 'hyperbola':
+            gens.append(HyperbolaGenerator(amount=subset_size))
+            names.append('hyperbola')
+        else:
+            raise ValueError(f"Unknown shape '{shape}'")
+    return gens, names
+
+
+def _save_dataset(df: pd.DataFrame, out_file: str, resolution=DEFAULT_RESOLUTION):
+    if out_file.lower().endswith('.npz'):
+        # Extract pixel columns (start with x_)
+        pixel_cols = [c for c in df.columns if c.startswith('x_')]
+        X_flat = df[pixel_cols].to_numpy(dtype='uint8')
+        h, w = resolution
+        try:
+            X = X_flat.reshape((-1, h, w))
+        except ValueError:
+            # Fallback: infer square if mismatch
+            side = int(math.sqrt(X_flat.shape[1]))
+            X = X_flat.reshape((-1, side, side))
+        # Save labels as fixed-width unicode to avoid pickle requirement on load
+        y = df['shape'].to_numpy(dtype='U16')
+        np.savez_compressed(out_file, X=X, y=y)
+    else:
+        df.to_csv(out_file, compression='gzip', index=None)
+
+
+def main(argv=None):
+    args = _parse_args(argv)
+
+    # Determine if we should run (legacy: action == 'run')
+    if not args.action:
+        # If no action given, do nothing (user may import library)
+        return
+
+    subset_size = args.subset if args.subset is not None else (args.subset_legacy if args.subset_legacy else DEFAULT_SUBSET_SIZE)
+    out_file = args.out if args.out else (args.outfile_legacy if args.outfile_legacy else 'ShapesV4.csv')
+    # Resolution is always taken from CLI (with default 28x28)
+    resolution = tuple(args.resolution)
+
+    set_seed(args.seed)
+
+    all_shapes = ['triangle', 'circle', 'ellipse', 'parabola', 'hyperbola']
+    selected_shapes = args.shapes if args.shapes else all_shapes
+
+    gens, names = _build_generators(selected_shapes, subset_size)
+    df = createGrayscaleImageDataset(generators=gens, names=names, subset_size=subset_size, resolution=resolution)
+    _save_dataset(df, out_file, resolution=resolution)
+
+
+if __name__ == '__main__':
+    main()
 
